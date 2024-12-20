@@ -7,6 +7,8 @@ template
 runner.inc
 runner
 inc
+github.com/goradd/got/internal/testdata/template
+github.com/goradd/got/internal/testdata
 
 
 testPredefines.tpl.got
