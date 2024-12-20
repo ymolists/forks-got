@@ -408,11 +408,16 @@ The following fragments are predefined:
 * `{{outName}}` is the base name of the output file being written, including any extensions
 * `{{outRoot}}` is the base name of the output file being written without any extensions
 * `{{outParent}}` is the directory name of the output file being written, without the preceeding path
+* `{{importPath}}` produces the import path of the output file
+* `{{importParent}}` produces the parent of the import path of the output file
 
 The template* fragments refer to the top level file, the one sent to the got command to process,
 while the include* fragments refer to the file being processed currently. For example, if the
 "a.tmpl" file included the "b.tmpl" file, then {{includeName}} in the b.tmpl file would
 produce "b.tmpl", while {{templateName}} in the b.tmpl file would produce "a.tmpl".
+
+importPath and importParent are used to generate import paths to files that are relative
+to the output file, since go does not support relative import paths.
 
 #### Example
 ```
