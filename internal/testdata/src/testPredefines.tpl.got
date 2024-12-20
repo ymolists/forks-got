@@ -15,6 +15,9 @@
 {{includeName}}
 {{includeRoot}}
 {{includeParent}}
+{{# test processing functions }}
+{{importPath}}
+{{importParent}}
 
 {{: "predef.inc" }}
 

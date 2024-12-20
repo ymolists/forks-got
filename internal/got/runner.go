@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -28,12 +29,16 @@ const (
 	blockIncludeName   = "includeName"
 	blockIncludeRoot   = "includeRoot"
 	blockIncludeParent = "includeParent"
+
+	blockImportPath   = "importPath"
+	blockImportParent = "importParent"
 )
 
 type namedBlockEntry struct {
 	text       string
 	paramCount int
 	ref        locationRef
+	f          func(string, []string) (string, error) // process text at the time the fragment is used
 }
 
 var modules map[string]string
@@ -153,10 +158,10 @@ func processFile(file, outDir string, asts []astType, runImports bool) error {
 	}
 
 	// Default named block values
-	namedBlocks[blockIncludePath] = namedBlockEntry{"", 0, locationRef{}}
-	namedBlocks[blockIncludeName] = namedBlockEntry{"", 0, locationRef{}}
-	namedBlocks[blockIncludeRoot] = namedBlockEntry{"", 0, locationRef{}}
-	namedBlocks[blockIncludeParent] = namedBlockEntry{"", 0, locationRef{}}
+	namedBlocks[blockIncludePath] = namedBlockEntry{"", 0, locationRef{}, nil}
+	namedBlocks[blockIncludeName] = namedBlockEntry{"", 0, locationRef{}, nil}
+	namedBlocks[blockIncludeRoot] = namedBlockEntry{"", 0, locationRef{}, nil}
+	namedBlocks[blockIncludeParent] = namedBlockEntry{"", 0, locationRef{}, nil}
 
 	file, _ = filepath.Abs(file)
 	root := strings.TrimSuffix(filepath.Base(file), filepath.Ext(file))
@@ -168,10 +173,10 @@ func processFile(file, outDir string, asts []astType, runImports bool) error {
 		root = strings.TrimSuffix(root, ext)
 	}
 
-	namedBlocks[blockTemplatePath] = namedBlockEntry{file, 0, locationRef{}}
-	namedBlocks[blockTemplateName] = namedBlockEntry{filepath.Base(file), 0, locationRef{}}
-	namedBlocks[blockTemplateRoot] = namedBlockEntry{root, 0, locationRef{}}
-	namedBlocks[blockTemplateParent] = namedBlockEntry{filepath.Base(filepath.Dir(file)), 0, locationRef{}}
+	namedBlocks[blockTemplatePath] = namedBlockEntry{file, 0, locationRef{}, nil}
+	namedBlocks[blockTemplateName] = namedBlockEntry{filepath.Base(file), 0, locationRef{}, nil}
+	namedBlocks[blockTemplateRoot] = namedBlockEntry{root, 0, locationRef{}, nil}
+	namedBlocks[blockTemplateParent] = namedBlockEntry{filepath.Base(filepath.Dir(file)), 0, locationRef{}, nil}
 
 	newPath, _ = filepath.Abs(newPath)
 	root = strings.TrimSuffix(filepath.Base(newPath), filepath.Ext(newPath))
@@ -183,10 +188,16 @@ func processFile(file, outDir string, asts []astType, runImports bool) error {
 		root = strings.TrimSuffix(root, ext)
 	}
 
-	namedBlocks[blockOutPath] = namedBlockEntry{newPath, 0, locationRef{}}
-	namedBlocks[blockOutName] = namedBlockEntry{filepath.Base(newPath), 0, locationRef{}}
-	namedBlocks[blockOutRoot] = namedBlockEntry{root, 0, locationRef{}}
-	namedBlocks[blockOutParent] = namedBlockEntry{filepath.Base(filepath.Dir(newPath)), 0, locationRef{}}
+	namedBlocks[blockOutPath] = namedBlockEntry{newPath, 0, locationRef{}, nil}
+	namedBlocks[blockOutName] = namedBlockEntry{filepath.Base(newPath), 0, locationRef{}, nil}
+	namedBlocks[blockOutRoot] = namedBlockEntry{root, 0, locationRef{}, nil}
+	namedBlocks[blockOutParent] = namedBlockEntry{filepath.Base(filepath.Dir(newPath)), 0, locationRef{}, nil}
+
+	// These two are slow functions, so we cannot call them on every file,
+	// but rather just when they are needed, so we use a processing function
+	// that gets called at the time the nameBlock is invoked.
+	namedBlocks[blockImportPath] = namedBlockEntry{newPath, 0, locationRef{}, importPath}
+	namedBlocks[blockImportParent] = namedBlockEntry{newPath, 0, locationRef{}, importParent}
 
 	a, err := buildAst(file, namedBlocks)
 	if err != nil {
@@ -372,4 +383,17 @@ func fileIsNewer(path1, path2 string) bool {
 	modTime1 := file1.ModTime()
 	modTime2 := file2.ModTime()
 	return modTime1.After(modTime2)
+}
+
+func importPath(outPath string, params []string) (string, error) {
+	return sys.ImportPath(outPath)
+}
+
+func importParent(outPath string, params []string) (string, error) {
+	out, err := sys.ImportPath(outPath)
+	if err != nil {
+		return "", err
+	}
+	dir := path.Dir(out)
+	return dir, err
 }

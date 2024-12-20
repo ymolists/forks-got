@@ -66,18 +66,18 @@ func lexFile(fileName string,
 		incRoot := namedBlocks[blockIncludeRoot].text
 		incParent := namedBlocks[blockIncludeParent].text
 
-		namedBlocks[blockIncludePath] = namedBlockEntry{fp, 0, locationRef{}}
-		namedBlocks[blockIncludeName] = namedBlockEntry{filepath.Base(fp), 0, locationRef{}}
-		namedBlocks[blockIncludeRoot] = namedBlockEntry{root, 0, locationRef{}}
-		namedBlocks[blockIncludeParent] = namedBlockEntry{filepath.Base(filepath.Dir(fp)), 0, locationRef{}}
+		namedBlocks[blockIncludePath] = namedBlockEntry{fp, 0, locationRef{}, nil}
+		namedBlocks[blockIncludeName] = namedBlockEntry{filepath.Base(fp), 0, locationRef{}, nil}
+		namedBlocks[blockIncludeRoot] = namedBlockEntry{root, 0, locationRef{}, nil}
+		namedBlocks[blockIncludeParent] = namedBlockEntry{filepath.Base(filepath.Dir(fp)), 0, locationRef{}, nil}
 
 		l.run()
 
 		// restore
-		namedBlocks[blockIncludePath] = namedBlockEntry{incPath, 0, locationRef{}}
-		namedBlocks[blockIncludeName] = namedBlockEntry{incName, 0, locationRef{}}
-		namedBlocks[blockIncludeRoot] = namedBlockEntry{incRoot, 0, locationRef{}}
-		namedBlocks[blockIncludeParent] = namedBlockEntry{incParent, 0, locationRef{}}
+		namedBlocks[blockIncludePath] = namedBlockEntry{incPath, 0, locationRef{}, nil}
+		namedBlocks[blockIncludeName] = namedBlockEntry{incName, 0, locationRef{}, nil}
+		namedBlocks[blockIncludeRoot] = namedBlockEntry{incRoot, 0, locationRef{}, nil}
+		namedBlocks[blockIncludeParent] = namedBlockEntry{incParent, 0, locationRef{}, nil}
 	}()
 	return l
 }
@@ -482,6 +482,12 @@ func processParams(name string, in namedBlockEntry, params []string) (out string
 
 	var i int
 	var s string
+
+	if in.f != nil {
+		// A processing function is being used
+		out, err = in.f(in.text, params)
+		return
+	}
 
 	if len(params) == 1 &&
 		params[0] == "" &&
@@ -895,7 +901,7 @@ func (l *lexer) addNamedBlock(name string, text string, paramCount int) error {
 		blockName: l.blockName,
 		lineNum:   l.lineNum,
 		offset:    l.lineRuneNum,
-	}}
+	}, nil}
 	return nil
 }
 
